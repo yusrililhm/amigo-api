@@ -34,7 +34,7 @@ func StartApplication() {
 
 	db.InitializeDatabase()
 
-	pg := db.GetDatabaseInstance()
+	pg := db.NewPostgres()
 	rdb := db.NewRedisClient()
 
 	wg := &sync.WaitGroup{}

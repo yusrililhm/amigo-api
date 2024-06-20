@@ -149,6 +149,6 @@ func InitializeDatabase() {
 	handleRequiredTables()
 }
 
-func GetDatabaseInstance() *sql.DB {
+func NewPostgres() *sql.DB {
 	return db
 }
