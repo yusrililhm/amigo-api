@@ -15,13 +15,13 @@ type userPg struct {
 const (
 	addUserQuery = `insert into "user" (full_name, email, password, role) values($1, $2, $3, 'customers')`
 
-	modifyUserQuery = `update "user" set full_name = $2, email = $3, updated_at = now() where id = $1`
+	modifyUserQuery = `update "user" set full_name = $2, email = $3, address = $4, updated_at = now() where id = $1`
 
 	changePasswordQuery = `update "user" set password = $2, updated_at = now() where id = $1`
 
-	fetchUserByEmailQuery = `select id, full_name, email, password, role, created_at, updated_at from "user" where email = $1`
+	fetchUserByEmailQuery = `select id, full_name, email, password, role, address, created_at, updated_at from "user" where email = $1`
 
-	fetchUserByIdQuery = `select id, full_name, email, password, role, created_at, updated_at from "user" where id = $1`
+	fetchUserByIdQuery = `select id, full_name, email, password, role, address, created_at, updated_at from "user" where id = $1`
 )
 
 func NewUserPg(db *sql.DB) user_repo.UserRepository {
@@ -112,7 +112,7 @@ func (pg *userPg) ChangePassword(id int, user *entity.User) exception.Exception 
 // FetchByEmail implements user_repo.UserRepository.
 func (pg *userPg) FetchByEmail(email string) (*entity.User, exception.Exception) {
 
-	user := entity.User{}
+	user := userData{}
 
 	stmt, _ := pg.db.Prepare(fetchUserByEmailQuery)
 
@@ -122,6 +122,7 @@ func (pg *userPg) FetchByEmail(email string) (*entity.User, exception.Exception)
 		&user.Email,
 		&user.Password,
 		&user.Role,
+		&user.Address,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	); err != nil {
@@ -134,13 +135,22 @@ func (pg *userPg) FetchByEmail(email string) (*entity.User, exception.Exception)
 		return nil, exception.NewInternalServerError("something went wrong")
 	}
 
-	return &user, nil
+	return &entity.User{
+		Id:        user.Id,
+		FullName:  user.FullName,
+		Email:     email,
+		Password:  user.Password,
+		Role:      user.Role,
+		Address:   user.Address.String,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+	}, nil
 }
 
 // FetchById implements user_repo.UserRepository.
 func (pg *userPg) FetchById(id int) (*entity.User, exception.Exception) {
 
-	user := entity.User{}
+	user := userData{}
 
 	stmt, _ := pg.db.Prepare(fetchUserByIdQuery)
 
@@ -150,6 +160,7 @@ func (pg *userPg) FetchById(id int) (*entity.User, exception.Exception) {
 		&user.Email,
 		&user.Password,
 		&user.Role,
+		&user.Address,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	); err != nil {
@@ -162,7 +173,16 @@ func (pg *userPg) FetchById(id int) (*entity.User, exception.Exception) {
 		return nil, exception.NewInternalServerError("something went wrong")
 	}
 
-	return &user, nil
+	return &entity.User{
+		Id:        user.Id,
+		FullName:  user.FullName,
+		Email:     user.Email,
+		Password:  user.Password,
+		Role:      user.Role,
+		Address:   user.Address.String,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+	}, nil
 }
 
 // Modify implements user_repo.UserRepository.
@@ -187,6 +207,7 @@ func (pg *userPg) Modify(id int, user *entity.User) exception.Exception {
 		id,
 		user.FullName,
 		user.Email,
+		user.Address,
 	); err != nil {
 		tx.Rollback()
 		log.Println(err.Error())

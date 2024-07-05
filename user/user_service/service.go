@@ -3,6 +3,7 @@ package user_service
 import (
 	"fashion-api/dto"
 	"fashion-api/entity"
+	"fashion-api/model"
 	"fashion-api/pkg/exception"
 	"fashion-api/pkg/helper"
 	"fashion-api/user/user_repo"
@@ -155,6 +156,7 @@ func (us *userService) Modify(id int, payload *dto.UserModifyPayload) (*helper.R
 	user := &entity.User{
 		FullName: payload.FullName,
 		Email:    payload.Email,
+		Address:  payload.Address,
 	}
 
 	us.wg.Add(1)
@@ -214,10 +216,11 @@ func (us *userService) Profile(id int) (*helper.ResponseBody, exception.Exceptio
 		return &helper.ResponseBody{
 			Status:  http.StatusOK,
 			Message: "user successfully fetched",
-			Data: &dto.UserData{
+			Data: &model.UserData{
 				Id:        user.Id,
 				FullName:  user.FullName,
 				Email:     user.Email,
+				Address:   user.Address,
 				CreatedAt: user.CreatedAt,
 				UpdatedAt: user.UpdatedAt,
 			},

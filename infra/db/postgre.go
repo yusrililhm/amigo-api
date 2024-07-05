@@ -48,6 +48,7 @@ func handleRequiredTables() {
 			email varchar(60) not null unique,
 			password text not null,
 			role varchar not null,
+			address text,
 			created_at timestamptz default now(),
 			updated_at timestamptz default now(),
 			deleted_at timestamptz

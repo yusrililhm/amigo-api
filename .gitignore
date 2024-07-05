@@ -1,1 +1,3 @@
 .env
+category.req.http
+product.req.http

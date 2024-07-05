@@ -4,24 +4,29 @@ import (
 	"fashion-api/category/category_handler"
 	"fashion-api/category/category_repo/category_pg"
 	"fashion-api/category/category_service"
+
 	"fashion-api/infra/config"
 	"fashion-api/infra/db"
+
 	"fashion-api/order/order_handler"
 	"fashion-api/order/order_repo/order_pg"
 	"fashion-api/order/order_service"
+
 	"fashion-api/product/product_handler"
 	"fashion-api/product/product_repo/product_pg"
 	"fashion-api/product/product_service"
+
 	"fashion-api/transaction/transaction_handler"
 	"fashion-api/transaction/transaction_repo/transaction_pg"
 	"fashion-api/transaction/transaction_service"
+
 	"fashion-api/user/user_handler"
 	"fashion-api/user/user_repo/user_pg"
 	"fashion-api/user/user_service"
-	"sync"
 
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

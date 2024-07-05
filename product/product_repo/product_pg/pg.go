@@ -28,7 +28,7 @@ const (
 
 	deleteProductQuery = `update "product" set updated_at = now(), deleted_at = now() where id = $1`
 
-	modifyProductQuery = `update "product" set name = $2, description = $3, category_id = $4, price = $5, stock = $5, updated_at = now() where id = $1`
+	modifyProductQuery = `update "product" set name = $2, description = $3, category_id = $4, price = $5, stock = $6, updated_at = now() where id = $1`
 )
 
 func NewProductPg(db *sql.DB, rdb *redis.Client) product_repo.ProductRepo {
@@ -207,6 +207,8 @@ func (pg *productPg) FetchById(id int) (*entity.Product, exception.Exception) {
 
 // Modify implements product_repo.ProductRepo.
 func (pg *productPg) Modify(id int, product *entity.Product) exception.Exception {
+
+	log.Println(id)
 
 	tx, err := pg.db.Begin()
 
