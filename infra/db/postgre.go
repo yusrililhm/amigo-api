@@ -47,12 +47,12 @@ func handleRequiredTables() {
 			full_name varchar(60) not null,
 			email varchar(60) not null unique,
 			password text not null,
-			role varchar not null,
+			role varchar(10) not null,
 			address text,
 			created_at timestamptz default now(),
 			updated_at timestamptz default now(),
 			deleted_at timestamptz
-		)`
+		);`
 
 		createTableCategoryQuery = `create table if not exists "category" (
 			id serial primary key,
@@ -60,7 +60,7 @@ func handleRequiredTables() {
 			created_at timestamptz default now(),
 			updated_at timestamptz default now(),
 			deleted_at timestamptz
-		)
+		);
 		`
 
 		createTableProductQuery = `create table if not exists "product" (
@@ -75,7 +75,7 @@ func handleRequiredTables() {
 			updated_at timestamptz default now(),
 			deleted_at timestamptz,
 			constraint fk_category_id foreign key (category_id) references category(id)
-		)
+		);
 		`
 
 		createTableOrderQuery = `create table if not exists "order" (
@@ -89,7 +89,7 @@ func handleRequiredTables() {
 			deleted_at timestamptz,
 			constraint fk_user_id foreign key (user_id) references "user"(id),
 			constraint fk_product_id foreign key (product_id) references product(id)
-		)
+		);
 		`
 
 		createTableTransactionQuery = `create table if not exists "transaction" (
@@ -101,7 +101,21 @@ func handleRequiredTables() {
 			deleted_at timestamptz,
 			constraint fk_user_id foreign key (user_id) references "user"(id),
 			constraint fk_order_id foreign key (order_id) references "order"(id)
-		)`
+		);`
+
+		createTrigger = `
+			create or replace function removeOrderWhenTransactionSuccess() returns trigger as $$
+			begin
+				update "order" set deleted_at = now(), updated_at = now() where id = NEW.order_id;
+				return NEW;
+			end;
+			$$ language plpgsql;
+
+			create or replace trigger removeOrder
+			after insert on transaction
+			for each row
+			execute function removeOrderWhenTransactionSuccess();
+		`
 
 		createAdminQuery = `insert into "user" (full_name, email, password, role) values($1, $2, $3, $4) on conflict(email) do nothing`
 	)
@@ -128,6 +142,11 @@ func handleRequiredTables() {
 
 	if _, err := db.Exec(createTableTransactionQuery); err != nil {
 		log.Fatal("error occured while create table transaction : ", err.Error())
+		return
+	}
+
+	if _, err := db.Exec(createTrigger); err != nil {
+		log.Fatal("error occured while create trigger : ", err.Error())
 		return
 	}
 
