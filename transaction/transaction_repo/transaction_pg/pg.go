@@ -1,15 +1,19 @@
 package transaction_pg
 
 import (
+	"context"
 	"database/sql"
 	"fashion-api/entity"
 	"fashion-api/pkg/exception"
 	"fashion-api/transaction/transaction_repo"
 	"log"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type transactionPg struct {
-	db *sql.DB
+	db  *sql.DB
+	rdb *redis.Client
 }
 
 const (
@@ -17,16 +21,19 @@ const (
 
 	fetchUserIdQuery = `select id, user_id from transaction where id = $1`
 
-	fetchAllCustomerTransactionQuery = `select t.id, o.product_id, p.name, o.qty, o.total_price, t.user_id, u.full_name, t.created_at, t.updated_at from transaction as t left join "user" as u on t.user_id = u.id left join "order" as o on t.order_id = o.id left join product as p on o.product_id = p.id where t.user_id = $1 and t.deleted_at is null`
+	fetchAllCustomerTransactionQuery = `select t.id, o.product_id, p.name, o.qty, o.total_price, t.user_id, u.full_name, t.created_at, t.updated_at from transaction as t left join "user" as u on t.user_id = u.id left join "order" as o on t.order_id = o.id left join product as p on o.product_id = p.id where t.user_id = $1 and t.deleted_at is null order by created_at desc`
 
-	fetchAllTransactionQuery = `select t.id, o.product_id, p.name, o.qty, o.total_price, t.user_id, u.full_name, t.created_at, t.updated_at from transaction as t left join "user" as u on t.user_id = u.id left join "order" as o on t.order_id = o.id left join product as p on o.product_id = p.id where t.deleted_at is null`
+	fetchAllTransactionQuery = `select t.id, o.product_id, p.name, o.qty, o.total_price, t.user_id, u.full_name, t.created_at, t.updated_at from transaction as t left join "user" as u on t.user_id = u.id left join "order" as o on t.order_id = o.id left join product as p on o.product_id = p.id where t.deleted_at is null order by created_at desc`
 
-	fetchTransactionByIdQuery = `select t.id, o.product_id, p.name, o.qty, o.total_price, t.user_id, u.full_name, t.created_at, t.updated_at from transaction as t left join "user" as u on t.user_id = u.id left join "order" as o on t.order_id = o.id left join product as p on o.product_id = p.id where t.id = $1 and t.deleted_at is null`
+	fetchTransactionByIdQuery = `select t.id, o.product_id, p.name, o.qty, o.total_price, t.user_id, u.full_name, t.created_at, t.updated_at from transaction as t left join "user" as u on t.user_id = u.id left join "order" as o on t.order_id = o.id left join product as p on o.product_id = p.id where t.id = $1 and t.deleted_at is null order by created_at desc`
+
+	updateStockAndSoldQuery = `update product set stock = stock - (select qty from "order" where id = $1), sold = sold + (select qty from "order" where id = $1), updated_at = now() where id = (select product_id from "order" where id = $1)`
 )
 
-func NewTransactionPg(db *sql.DB) transaction_repo.TransactionRepo {
+func NewTransactionPg(db *sql.DB, rdb *redis.Client) transaction_repo.TransactionRepo {
 	return &transactionPg{
-		db: db,
+		db:  db,
+		rdb: rdb,
 	}
 }
 
@@ -55,9 +62,28 @@ func (pg *transactionPg) Add(transactionn *entity.Transaction) exception.Excepti
 		return exception.NewInternalServerError("something went wrong")
 	}
 
+	updateStockAndSold, err := tx.Prepare(updateStockAndSoldQuery)
+
+	if err != nil {
+		log.Println(err.Error())
+		tx.Rollback()
+		return exception.NewInternalServerError("something went wrong")
+	}
+
+	if _, err := updateStockAndSold.Exec(transactionn.OrderId); err != nil {
+		log.Println(err.Error())
+		tx.Rollback()
+		return exception.NewInternalServerError("something went wrong")
+	}
+
 	if err := tx.Commit(); err != nil {
 		log.Println(err.Error())
 		tx.Rollback()
+		return exception.NewInternalServerError("something went wrong")
+	}
+
+	if err := pg.rdb.FlushDB(context.Background()).Err(); err != nil {
+		log.Println(err.Error())
 		return exception.NewInternalServerError("something went wrong")
 	}
 
