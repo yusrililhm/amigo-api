@@ -78,7 +78,7 @@ func StartApplication() {
 	os := order_service.NewOrderService(or, pr)
 	oh := order_handler.NewOrderHandler(os)
 
-	tr := transaction_pg.NewTransactionPg(pg)
+	tr := transaction_pg.NewTransactionPg(pg, rdb)
 	ts := transaction_service.NewTransactionService(tr, or)
 	th := transaction_handler.NewTransactionHandler(ts)
 
