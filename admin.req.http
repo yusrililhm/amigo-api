@@ -1,0 +1,13 @@
+### admin login
+POST http://localhost:8080/user/signin HTTP/1.1
+Content-Type: : application/json
+
+{
+    "email": "admin@fashion.com",
+    "password": "adminsecret"
+}
+
+### all trx
+GET http://localhost:8080/admin/transaction HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGZhc2hpb24uY29tIiwiZXhwaXJlZF9hdCI6MTcyMDk1OTQ2NDU0NCwicm9sZSI6ImFkbWluIn0.7cvX7LOI7-V6AoR2GhjlemTX3c5IcbLkB9BplT9qdTQ
+Content-Type: application/json

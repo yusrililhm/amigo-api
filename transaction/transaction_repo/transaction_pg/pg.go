@@ -1,19 +1,15 @@
 package transaction_pg
 
 import (
-	"context"
 	"database/sql"
 	"fashion-api/entity"
 	"fashion-api/pkg/exception"
 	"fashion-api/transaction/transaction_repo"
 	"log"
-
-	"github.com/redis/go-redis/v9"
 )
 
 type transactionPg struct {
-	db  *sql.DB
-	rdb *redis.Client
+	db *sql.DB
 }
 
 const (
@@ -30,10 +26,9 @@ const (
 	updateStockAndSoldQuery = `update product set stock = stock - (select qty from "order" where id = $1), sold = sold + (select qty from "order" where id = $1), updated_at = now() where id = (select product_id from "order" where id = $1)`
 )
 
-func NewTransactionPg(db *sql.DB, rdb *redis.Client) transaction_repo.TransactionRepo {
+func NewTransactionPg(db *sql.DB) transaction_repo.TransactionRepo {
 	return &transactionPg{
-		db:  db,
-		rdb: rdb,
+		db: db,
 	}
 }
 
@@ -79,11 +74,6 @@ func (pg *transactionPg) Add(transactionn *entity.Transaction) exception.Excepti
 	if err := tx.Commit(); err != nil {
 		log.Println(err.Error())
 		tx.Rollback()
-		return exception.NewInternalServerError("something went wrong")
-	}
-
-	if err := pg.rdb.FlushDB(context.Background()).Err(); err != nil {
-		log.Println(err.Error())
 		return exception.NewInternalServerError("something went wrong")
 	}
 

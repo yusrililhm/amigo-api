@@ -221,6 +221,7 @@ func (us *userService) Profile(id int) (*helper.ResponseBody, exception.Exceptio
 				FullName:  user.FullName,
 				Email:     user.Email,
 				Address:   user.Address,
+				Role:      user.Role,
 				CreatedAt: user.CreatedAt,
 				UpdatedAt: user.UpdatedAt,
 			},

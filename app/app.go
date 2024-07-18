@@ -40,7 +40,6 @@ func StartApplication() {
 	db.InitializeDatabase()
 
 	pg := db.NewPostgres()
-	rdb := db.NewRedisClient()
 
 	wg := &sync.WaitGroup{}
 
@@ -66,11 +65,11 @@ func StartApplication() {
 	us := user_service.NewUserService(ur, wg)
 	uh := user_handler.NewUserHandler(us)
 
-	cr := category_pg.NewCategoryPg(pg, rdb)
+	cr := category_pg.NewCategoryPg(pg)
 	cs := category_service.NewCategoryService(cr)
 	ch := category_handler.NewCategoryHandler(cs)
 
-	pr := product_pg.NewProductPg(pg, rdb)
+	pr := product_pg.NewProductPg(pg)
 	ps := product_service.NewProductService(pr, cr, wg)
 	ph := product_handler.NewProductHandler(ps)
 
@@ -78,7 +77,7 @@ func StartApplication() {
 	os := order_service.NewOrderService(or, pr)
 	oh := order_handler.NewOrderHandler(os)
 
-	tr := transaction_pg.NewTransactionPg(pg, rdb)
+	tr := transaction_pg.NewTransactionPg(pg)
 	ts := transaction_service.NewTransactionService(tr, or)
 	th := transaction_handler.NewTransactionHandler(ts)
 

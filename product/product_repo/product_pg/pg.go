@@ -1,22 +1,16 @@
 package product_pg
 
 import (
-	"context"
 	"database/sql"
-	"encoding/json"
 	"log"
-	"time"
 
 	"fashion-api/entity"
 	"fashion-api/pkg/exception"
 	"fashion-api/product/product_repo"
-
-	"github.com/redis/go-redis/v9"
 )
 
 type productPg struct {
-	db  *sql.DB
-	rdb *redis.Client
+	db *sql.DB
 }
 
 const (
@@ -31,10 +25,9 @@ const (
 	modifyProductQuery = `update "product" set name = $2, description = $3, category_id = $4, price = $5, stock = $6, updated_at = now() where id = $1`
 )
 
-func NewProductPg(db *sql.DB, rdb *redis.Client) product_repo.ProductRepo {
+func NewProductPg(db *sql.DB) product_repo.ProductRepo {
 	return &productPg{
-		db:  db,
-		rdb: rdb,
+		db: db,
 	}
 }
 
@@ -115,21 +108,7 @@ func (pg *productPg) Delete(id int) exception.Exception {
 // Fetch implements product_repo.ProductRepo.
 func (pg *productPg) Fetch() ([]*entity.Product, exception.Exception) {
 
-	cmd := pg.rdb.Get(context.Background(), "products")
-
 	products := []*entity.Product{}
-
-	if cmd.Err() != redis.Nil {
-
-		err := json.Unmarshal([]byte(cmd.Val()), &products)
-
-		if err != nil {
-			log.Println(err.Error())
-			return nil, exception.NewInternalServerError("something went wrong")
-		}
-
-		return products, nil
-	}
 
 	rows, err := pg.db.Query(fetchProductQuery)
 
@@ -160,10 +139,6 @@ func (pg *productPg) Fetch() ([]*entity.Product, exception.Exception) {
 		}
 
 		products = append(products, &product)
-	}
-
-	if err := pg.setDataToRedis(products); err != nil {
-		return nil, err
 	}
 
 	return products, nil
@@ -243,18 +218,6 @@ func (pg *productPg) Modify(id int, product *entity.Product) exception.Exception
 		tx.Rollback()
 		log.Println(err.Error())
 		return exception.NewInternalServerError("something went wrong")
-	}
-
-	return nil
-}
-
-func (pg *productPg) setDataToRedis(products []*entity.Product) exception.Exception {
-
-	data, _ := json.Marshal(products)
-
-	if err := pg.rdb.Set(context.Background(), "products", data, 1*time.Hour).Err(); err != nil {
-		log.Println(err.Error())
-		return exception.NewInternalServerError("somethong went wrong")
 	}
 
 	return nil

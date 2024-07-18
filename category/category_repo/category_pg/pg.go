@@ -1,23 +1,16 @@
 package category_pg
 
 import (
-	"context"
 	"database/sql"
-	"encoding/json"
-	"fmt"
 	"log"
-	"time"
 
 	"fashion-api/category/category_repo"
 	"fashion-api/entity"
 	"fashion-api/pkg/exception"
-
-	"github.com/redis/go-redis/v9"
 )
 
 type categoryPg struct {
-	db  *sql.DB
-	rdb *redis.Client
+	db *sql.DB
 }
 
 const (
@@ -34,10 +27,9 @@ const (
 	modifyCategoryQuery = `update "category" set type = $2, updated_at = now() where id = $1`
 )
 
-func NewCategoryPg(db *sql.DB, rdb *redis.Client) category_repo.CategoryRepo {
+func NewCategoryPg(db *sql.DB) category_repo.CategoryRepo {
 	return &categoryPg{
-		db:  db,
-		rdb: rdb,
+		db: db,
 	}
 }
 
@@ -149,23 +141,8 @@ func (pg *categoryPg) Fetch() ([]*entity.Category, exception.Exception) {
 // FetchById implements category_repo.CategoryRepo.
 func (pg *categoryPg) FetchById(id int) (*category_repo.CategoryWithProduct, exception.Exception) {
 
-	cmd := pg.rdb.Get(context.Background(), fmt.Sprintf("category%d", id))
-
 	categoriesProducts := []*category_repo.CategoryProduct{}
 	categoryWithProducts := &category_repo.CategoryWithProduct{}
-
-	if cmd.Err() != redis.Nil {
-
-		value := &category_repo.CategoryWithProduct{}
-
-		err := json.Unmarshal([]byte(cmd.Val()), &value)
-
-		if err != nil {
-			return nil, exception.NewInternalServerError("something went wrong")
-		}
-
-		return value, nil
-	}
 
 	stmt, err := pg.db.Prepare(fetchCategoryByIdQuery)
 
@@ -203,13 +180,7 @@ func (pg *categoryPg) FetchById(id int) (*category_repo.CategoryWithProduct, exc
 		categoriesProducts = append(categoriesProducts, categoryProduct.categoryWithProductToAggregate())
 	}
 
-	data := categoryWithProducts.HandleCategoryWithProduct(categoriesProducts)
-
-	if err := pg.setDataToRedis(id, data); err != nil {
-		return nil, err
-	}
-
-	return data, nil
+	return categoryWithProducts.HandleCategoryWithProduct(categoriesProducts), nil
 }
 
 // FetchId implements category_repo.CategoryRepo.
@@ -265,18 +236,6 @@ func (pg *categoryPg) Modify(id int, category *entity.Category) exception.Except
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		log.Println(err.Error())
-		return exception.NewInternalServerError("something went wrong")
-	}
-
-	return nil
-}
-
-func (pg *categoryPg) setDataToRedis(id int, data *category_repo.CategoryWithProduct) exception.Exception {
-
-	b, _ := json.Marshal(data)
-
-	if err := pg.rdb.Set(context.Background(), fmt.Sprintf("category%d", id), b, 1*time.Hour).Err(); err != nil {
 		log.Println(err.Error())
 		return exception.NewInternalServerError("something went wrong")
 	}
